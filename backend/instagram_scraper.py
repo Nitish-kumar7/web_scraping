@@ -13,8 +13,9 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
-# Import Service based on Selenium version
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.service import Service as ChromeService
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -37,50 +38,39 @@ class InstagramScraper:
         """Set up the Selenium WebDriver with Chrome options."""
         try:
             chrome_options = Options()
-            chrome_options.add_argument('--headless')  # Run in headless mode
+            chrome_options.add_argument('--headless=new')  # Updated headless mode syntax
             chrome_options.add_argument('--no-sandbox')
             chrome_options.add_argument('--disable-dev-shm-usage')
             chrome_options.add_argument('--disable-gpu')
             chrome_options.add_argument('--window-size=1920,1080')
             chrome_options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+            chrome_options.add_argument('--disable-extensions')
+            chrome_options.add_argument('--disable-popup-blocking')
+            chrome_options.add_argument('--disable-blink-features=AutomationControlled')
             
-            driver_path = None
-            # Attempt to find chromedriver automatically using webdriver-manager
+            # Add experimental options to avoid detection
+            chrome_options.add_experimental_option('excludeSwitches', ['enable-automation'])
+            chrome_options.add_experimental_option('useAutomationExtension', False)
+            
             try:
-                from webdriver_manager.chrome import ChromeDriverManager
-                driver_path = ChromeDriverManager().install()
-                logger.info(f"Chromedriver path found: {driver_path}")
-            except ImportError:
-                logger.warning("webdriver_manager not installed. Assuming chromedriver is in PATH.")
-                # If webdriver_manager is not available, Selenium might find it in PATH
-                pass # driver_path remains None
-            except Exception as e:
-                logger.warning(f"webdriver_manager failed: {e}. Assuming chromedriver is in PATH.")
-                pass # driver_path remains None
-
-            # Determine Selenium version and initialize driver accordingly
-            selenium_version = tuple(map(int, selenium.__version__.split('.')))
-            logger.info(f"Selenium version detected: {selenium.__version__}")
-
-            if selenium_version >= (4, 6, 0):
-                # Selenium 4.6.0 and later requires Service object
-                from selenium.webdriver.chrome.service import Service as ChromeService
-                service = ChromeService(executable_path=driver_path) if driver_path else ChromeService()
+                # Use webdriver-manager to handle ChromeDriver installation
+                service = ChromeService(ChromeDriverManager().install())
                 self.driver = webdriver.Chrome(service=service, options=chrome_options)
-                logger.info("WebDriver initialized using Service object.")
-            elif driver_path:
-                # Older Selenium versions might take executable_path directly
-                self.driver = webdriver.Chrome(executable_path=driver_path, options=chrome_options)
-                logger.info("WebDriver initialized using executable_path.")
-            else:
-                 # Fallback if driver_path is not found and using older Selenium
-                 self.driver = webdriver.Chrome(options=chrome_options)
-                 logger.warning("WebDriver initialized assuming chromedriver is in PATH (executable_path not provided).")
+                logger.info("WebDriver initialized successfully with ChromeDriverManager")
+            except Exception as e:
+                logger.error(f"Failed to initialize WebDriver with ChromeDriverManager: {e}")
+                raise
 
-            logger.info("WebDriver initialized successfully")
+            # Set page load timeout
+            self.driver.set_page_load_timeout(30)
+            
         except Exception as e:
             logger.error(f"Failed to initialize WebDriver: {e}")
-            # It's crucial to raise the exception if driver setup fails
+            if self.driver:
+                try:
+                    self.driver.quit()
+                except:
+                    pass
             raise
 
     def _respect_rate_limit(self):
@@ -277,7 +267,10 @@ class InstagramScraper:
     def __del__(self):
         """Clean up the WebDriver when the object is destroyed."""
         if self.driver:
-            self.driver.quit()
+            try:
+                self.driver.quit()
+            except:
+                pass
 
 # Example usage
 if __name__ == "__main__":
