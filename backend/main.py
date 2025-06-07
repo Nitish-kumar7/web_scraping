@@ -10,9 +10,10 @@ from datetime import datetime
 import requests
 from pydantic import BaseModel
 from instagram_scraper import InstagramScraper
+from resume_parser import parse_resume, ResumeParserError
+from tempfile import SpooledTemporaryFile
 
 from github_extractor import fetch_github_profile
-from resume_parser import parse_resume
 
 # Load environment variables
 load_dotenv()
@@ -106,28 +107,36 @@ async def upload_resume(
 ):
     try:
         logger.info(f"Processing resume upload: {file.filename}")
-        # Create uploads directory if it doesn't exist
-        os.makedirs("uploads", exist_ok=True)
         
-        # Save the uploaded file
-        file_path = f"uploads/{file.filename}"
-        with open(file_path, "wb") as buffer:
-            content = await file.read()
-            buffer.write(content)
+        # Read the file content into memory
+        content = await file.read()
         
-        # TODO: Implement PDF parsing logic here
-        # For now, return a simple response
+        # Parse the resume using our parser
+        parsed_data = parse_resume(content, file.filename)
+        
+        # Close the file to ensure it's not kept open
+        await file.close()
+        
         return {
-            "message": "Resume uploaded successfully",
+            "message": "Resume parsed successfully",
             "filename": file.filename,
-            "file_path": file_path
+            "parsed_data": parsed_data
         }
+    except ResumeParserError as e:
+        logger.error(f"Error parsing resume: {str(e)}")
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
     except Exception as e:
         logger.error(f"Error processing resume: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"Error processing resume: {str(e)}"
         )
+    finally:
+        # Ensure file is closed even if an error occurs
+        await file.close()
 
 if __name__ == "__main__":
     uvicorn.run(
