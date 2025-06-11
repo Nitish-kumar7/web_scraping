@@ -1,14 +1,48 @@
 import requests
 from bs4 import BeautifulSoup
-from typing import Dict, Any, List
+import json
+import time
+from typing import Dict, List, Optional, Any
+from dataclasses import dataclass
+from urllib.parse import urlparse, urljoin
 import re
 from datetime import datetime
-import time
 import random
-from urllib.parse import urlparse, urljoin
 
 class WebScraperError(Exception):
     pass
+
+@dataclass
+class PortfolioData:
+    name: Optional[str] = None
+    about: Optional[str] = None
+    skills: List[str] = None
+    experience: List[Dict] = None
+    projects: List[Dict] = None
+    education: List[Dict] = None
+    contact: Dict = None
+    social_links: Dict[str, str] = None
+    internal_links: List[str] = None
+    url: str = None
+    title: str = None
+    description: str = None
+    scraped_at: str = None
+
+    def __post_init__(self):
+        if self.skills is None:
+            self.skills = []
+        if self.experience is None:
+            self.experience = []
+        if self.projects is None:
+            self.projects = []
+        if self.education is None:
+            self.education = []
+        if self.contact is None:
+            self.contact = {}
+        if self.social_links is None:
+            self.social_links = {}
+        if self.internal_links is None:
+            self.internal_links = []
 
 def get_headers() -> Dict[str, str]:
     """Get headers for web requests."""
@@ -33,6 +67,24 @@ def normalize_url(url: str) -> str:
     if not url.startswith(('http://', 'https://')):
         url = 'https://' + url
     return url
+
+def fetch_page(url: str) -> Optional[str]:
+    """
+    Fetch the HTML content of a webpage.
+    
+    Args:
+        url (str): The URL to fetch
+        
+    Returns:
+        Optional[str]: The HTML content if successful, None otherwise
+    """
+    try:
+        response = requests.get(url, headers=get_headers(), timeout=10)
+        response.raise_for_status()
+        return response.text
+    except requests.RequestException as e:
+        print(f"Error fetching {url}: {e}")
+        return None
 
 def extract_links(soup: BeautifulSoup, base_url: str) -> List[str]:
     """Extract all links from the page."""
@@ -70,64 +122,135 @@ def extract_social_links(soup: BeautifulSoup, base_url: str) -> Dict[str, str]:
     
     return social_links
 
-def extract_projects(soup: BeautifulSoup) -> List[Dict[str, str]]:
-    """Extract project information from the page."""
-    projects = []
+def parse_portfolio(html: str, url: str) -> PortfolioData:
+    """
+    Parse portfolio data from HTML content.
     
-    # Look for common project section patterns
-    project_sections = soup.find_all(['section', 'div'], class_=re.compile(r'project|portfolio|work', re.IGNORECASE))
-    
-    for section in project_sections:
-        project = {
-            "title": "",
-            "description": "",
-            "technologies": [],
-            "url": ""
-        }
+    Args:
+        html (str): The HTML content to parse
+        url (str): The URL of the portfolio
         
-        # Try to find project title
-        title_elem = section.find(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'])
-        if title_elem:
-            project["title"] = title_elem.text.strip()
-        
-        # Try to find project description
-        desc_elem = section.find(['p', 'div'], class_=re.compile(r'description|about|summary', re.IGNORECASE))
-        if desc_elem:
-            project["description"] = desc_elem.text.strip()
-        
-        # Try to find technologies used
-        tech_elem = section.find(['div', 'ul'], class_=re.compile(r'tech|stack|tools|skills', re.IGNORECASE))
-        if tech_elem:
-            tech_list = tech_elem.find_all(['li', 'span'])
-            project["technologies"] = [tech.text.strip() for tech in tech_list]
-        
-        # Try to find project URL
-        link_elem = section.find('a', href=True)
-        if link_elem:
-            project["url"] = link_elem['href']
-        
-        if project["title"] or project["description"]:
-            projects.append(project)
-    
-    return projects
+    Returns:
+        PortfolioData: Structured portfolio data
+    """
+    soup = BeautifulSoup(html, 'html.parser')
+    data = PortfolioData(url=url, scraped_at=datetime.now().isoformat())
 
-def extract_skills(soup: BeautifulSoup) -> List[str]:
-    """Extract skills from the page."""
-    skills = []
-    
-    # Look for common skills section patterns
-    skills_sections = soup.find_all(['section', 'div'], class_=re.compile(r'skill|expertise|technologies', re.IGNORECASE))
-    
-    for section in skills_sections:
-        skill_elements = section.find_all(['li', 'span', 'div'])
-        for elem in skill_elements:
-            skill = elem.text.strip()
-            if skill and len(skill) < 50:  # Avoid long text that's probably not a skill
-                skills.append(skill)
-    
-    return list(set(skills))  # Remove duplicates
+    # Basic metadata
+    data.title = soup.title.string if soup.title else ""
+    meta_desc = soup.find('meta', attrs={'name': 'description'})
+    if meta_desc:
+        data.description = meta_desc.get('content', '')
 
-def scrape_portfolio(url: str) -> Dict[str, Any]:
+    # Name (from header logo or h1)
+    name_tag = soup.select_one('a.logo')
+    if name_tag:
+        data.name = name_tag.get_text(strip=True)
+    else:
+        h1_tag = soup.find('h1')
+        if h1_tag:
+            data.name = h1_tag.get_text(strip=True)
+
+    # About (first p in hero section)
+    about_tag = soup.select_one('#hero p')
+    if about_tag:
+        data.about = about_tag.get_text(strip=True)
+
+    # Skills
+    skills = set()
+    for img in soup.select('#skills .marquee-item img'):
+        alt = img.get('alt')
+        if alt:
+            skills.add(alt.strip())
+    data.skills = list(skills)
+
+    # Experience
+    data.experience = []
+    for entry in soup.select('#experience .timeline-entry'):
+        title = entry.select_one('h1.font-semibold.text-3xl')
+        date = entry.select_one('p.my-3.text-white-50')
+        resp_list = entry.select('ul li.text-lg')
+        responsibilities = [li.get_text(strip=True) for li in resp_list]
+        data.experience.append({
+            'title': title.get_text(strip=True) if title else None,
+            'date': date.get_text(strip=True).replace('🗓️', '').strip() if date else None,
+            'responsibilities': responsibilities
+        })
+
+    # Education
+    data.education = []
+    for edu_block in soup.select('#education [section="education"], #education .p-4.rounded-xl'):
+        years = edu_block.find_previous('h3', class_='text-xl')
+        institution = edu_block.select_one('h3.text-xl.font-bold')
+        degree = edu_block.select_one('p.text-neutral-600, p.dark\:text-neutral-300')
+        data.education.append({
+            'years': years.get_text(strip=True) if years else None,
+            'institution': institution.get_text(strip=True) if institution else None,
+            'degree': degree.get_text(strip=True) if degree else None
+        })
+
+    # Contact and Social Links
+    data.contact = {}
+    data.social_links = extract_social_links(soup, url)
+    for a in soup.select('footer .socials a'):
+        href = a.get('href')
+        if not href:
+            continue
+        if 'linkedin' in href:
+            data.contact['linkedin'] = href
+        elif 'instagram' in href:
+            data.contact['instagram'] = href
+        elif 'x.com' in href or 'twitter' in href:
+            data.contact['twitter'] = href
+
+    # Internal Links
+    data.internal_links = extract_links(soup, url)
+
+    return data
+
+def fetch_with_playwright(url: str) -> Optional[str]:
+    """
+    Fetch webpage content using Playwright for JavaScript-heavy sites.
+    
+    Args:
+        url (str): The URL to fetch
+        
+    Returns:
+        Optional[str]: The HTML content if successful, None otherwise
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True, args=['--no-sandbox', '--disable-setuid-sandbox'])
+            page = browser.new_page()
+            page.goto(url)
+            time.sleep(2)  # Wait for JS to load
+            html = page.content()
+            browser.close()
+            return html
+    except ImportError:
+        print("Playwright not installed. Please install it using: pip install playwright and then playwright install")
+        return None
+    except Exception as e:
+        print(f"Error using Playwright: {e}")
+        return None
+
+def save_to_json(data: PortfolioData, filename: str = "portfolio_data.json") -> None:
+    """
+    Save portfolio data to a JSON file.
+    
+    Args:
+        data (PortfolioData): The portfolio data to save
+        filename (str): The output filename
+    """
+    try:
+        with open(filename, "w", encoding="utf-8") as f:
+            json.dump(data.__dict__, f, indent=4, ensure_ascii=False)
+        print(f"✅ Data saved to '{filename}'")
+    except Exception as e:
+        print(f"❌ Error saving data: {e}")
+
+def scrape_portfolio(url: str) -> PortfolioData:
     """
     Scrape portfolio website data.
     
@@ -135,7 +258,7 @@ def scrape_portfolio(url: str) -> Dict[str, Any]:
         url (str): Portfolio website URL
         
     Returns:
-        Dict containing portfolio information
+        PortfolioData: Structured portfolio information
     """
     try:
         # Normalize URL
@@ -144,59 +267,39 @@ def scrape_portfolio(url: str) -> Dict[str, Any]:
         # Add random delay to avoid rate limiting
         time.sleep(random.uniform(1, 3))
         
-        # Make request
-        response = requests.get(url, headers=get_headers(), timeout=10)
-        response.raise_for_status()
+        # Try Playwright first for JavaScript-heavy sites
+        html = fetch_with_playwright(url)
         
-        # Parse HTML
-        soup = BeautifulSoup(response.text, 'html.parser')
+        # Fallback to regular requests if Playwright fails
+        if not html:
+            html = fetch_page(url)
+            
+        if not html:
+            raise WebScraperError("Failed to fetch webpage content")
+            
+        return parse_portfolio(html, url)
         
-        # Extract data
-        portfolio_data = {
-            "url": url,
-            "title": soup.title.string if soup.title else "",
-            "scraped_at": datetime.now().isoformat(),
-            "social_links": extract_social_links(soup, url),
-            "projects": extract_projects(soup),
-            "skills": extract_skills(soup),
-            "internal_links": extract_links(soup, url)
-        }
-        
-        # Try to extract meta description
-        meta_desc = soup.find('meta', attrs={'name': 'description'})
-        if meta_desc:
-            portfolio_data["description"] = meta_desc.get('content', '')
-        
-        return portfolio_data
-        
-    except requests.exceptions.RequestException as e:
-        raise WebScraperError(f"Error fetching website data: {str(e)}")
     except Exception as e:
-        raise WebScraperError(f"Unexpected error: {str(e)}")
+        raise WebScraperError(f"Error scraping portfolio: {str(e)}")
 
-def is_portfolio_website(url: str) -> bool:
-    """
-    Check if a website is likely a portfolio website.
+def main():
+    """Main execution function."""
+    portfolio_url = "https://yuva-sri-ramesh-portfolio.vercel.app/"
     
-    Args:
-        url (str): Website URL
-        
-    Returns:
-        bool: True if likely a portfolio website, False otherwise
-    """
     try:
-        portfolio_data = scrape_portfolio(url)
+        # Validate URL
+        parsed_url = urlparse(portfolio_url)
+        if not all([parsed_url.scheme, parsed_url.netloc]):
+            raise ValueError("Invalid URL format")
+            
+        # Scrape portfolio
+        result = scrape_portfolio(portfolio_url)
         
-        # Check for portfolio indicators
-        indicators = [
-            len(portfolio_data["projects"]) > 0,
-            len(portfolio_data["skills"]) > 0,
-            any(keyword in portfolio_data["title"].lower() for keyword in 
-                ["portfolio", "projects", "work", "developer", "designer", "engineer"]),
-            any(keyword in portfolio_data.get("description", "").lower() for keyword in 
-                ["portfolio", "projects", "work", "developer", "designer", "engineer"])
-        ]
+        # Save results
+        save_to_json(result)
         
-        return any(indicators)
-    except WebScraperError:
-        return False 
+    except Exception as e:
+        print(f"❌ Error: {e}")
+
+if __name__ == '__main__':
+    main() 

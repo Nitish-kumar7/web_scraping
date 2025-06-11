@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from instagram_scraper import InstagramScraper
 from resume_parser import parse_resume, ResumeParserError
 from tempfile import SpooledTemporaryFile
+from web_scraper import scrape_portfolio, save_to_json
 
 from github_extractor import fetch_github_profile
 
@@ -137,6 +138,12 @@ async def upload_resume(
     finally:
         # Ensure file is closed even if an error occurs
         await file.close()
+
+# Scrape a portfolio
+data = scrape_portfolio("https://example-portfolio.com")
+
+# Save to JSON
+save_to_json(data, "portfolio_data.json")
 
 if __name__ == "__main__":
     uvicorn.run(
