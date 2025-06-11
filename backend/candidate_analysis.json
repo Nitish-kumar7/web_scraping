@@ -1,0 +1,146 @@
+{
+  "evaluation": {
+    "overall_score": 10.42,
+    "skill_match_score": 0.0,
+    "experience_score": 0.0,
+    "project_score": 0,
+    "github_score": 4.2,
+    "education_score": 100,
+    "is_qualified": false,
+    "strengths": [],
+    "weaknesses": [],
+    "recommendations": []
+  },
+  "summary": "Overall Score: 10.42%\nQualification Status: Not Qualified\n\nDetailed Scores:\n- Skill Match: 0.0%\n- Experience: 0.0%\n- Projects: 0%\n- GitHub Activity: 4.2%\n- Education: 100%",
+  "portfolio_data": {
+    "name": "Yuva Sri Ramesh",
+    "about": "Yuva Sri R - AI Developer!",
+    "skills": [],
+    "experience": [
+      {
+        "title": "Software Developement Engineer",
+        "date": "April 2024 - April 2025",
+        "responsibilities": [
+          "Developed and automated end-to-end test cases using Selenium and Playwright for web applications.",
+          "Conducted penetration testing and implemented basic security validations in test pipelines.",
+          "Collaborated with the QA team to identify vulnerabilities and ensure consistent testing across platforms."
+        ]
+      },
+      {
+        "title": "Full Stack Developer Intern",
+        "date": "June 2023 - July 2023",
+        "responsibilities": [
+          "Designed and deployed a House Price Prediction website integrating ML models and interactive UI.",
+          "Implemented both backend logic and frontend components for a seamless user experience.",
+          "Conducted testing and debugging to ensure production readiness."
+        ]
+      },
+      {
+        "title": "AI/ML Engineer",
+        "date": "Feb 2024 - Feb 2024",
+        "responsibilities": [
+          "Built AI solutions using Large Language Models (LLMs), leveraging tools like Langchain and crewAI.",
+          "Designed and implemented Retrieval-Augmented Generation (RAG) pipelines for intelligent, context-aware responses.",
+          "Fine-tuned open-source LLMs and integrated them with vector databases like Qdrant and FAISS.",
+          "Developed AI-powered feedback systems and chatbots to deliver personalized learning and conversation experiences."
+        ]
+      }
+    ],
+    "projects": [],
+    "education": [
+      {
+        "years": "2021 - 2025",
+        "institution": "Kamaraj College of Engineering & Technology",
+        "degree": "Bachelor's Degree in Artificial Intelligence & Data Science"
+      },
+      {
+        "years": "2009 - 2021",
+        "institution": "K.C.A.D C.G.Matric Hr Sec School",
+        "degree": "1st to 12th Standard"
+      },
+      {
+        "years": "2006 - 2009",
+        "institution": "Bharath Nursery & Primary School",
+        "degree": "PreKG - UKG"
+      }
+    ],
+    "contact": {
+      "instagram": "https://www.instagram.com/yuvi_ramesh_/",
+      "twitter": "https://x.com/yuva_sri_ramesh",
+      "linkedin": "https://www.linkedin.com/in/yuvasri-r/"
+    },
+    "social_links": {
+      "instagram": "https://www.instagram.com/yuvi_ramesh_/",
+      "linkedin": "https://www.linkedin.com/in/yuvasri-r/"
+    },
+    "internal_links": [
+      "https://yuva-sri-ramesh-portfolio.vercel.app/#hero",
+      "https://yuva-sri-ramesh-portfolio.vercel.app/#work",
+      "https://yuva-sri-ramesh-portfolio.vercel.app/#skills",
+      "https://yuva-sri-ramesh-portfolio.vercel.app/#experience",
+      "https://yuva-sri-ramesh-portfolio.vercel.app/#education",
+      "https://yuva-sri-ramesh-portfolio.vercel.app/#resume",
+      "https://yuva-sri-ramesh-portfolio.vercel.app/#contact",
+      "https://www.instagram.com/yuvi_ramesh_/",
+      "https://x.com/yuva_sri_ramesh",
+      "https://www.linkedin.com/in/yuvasri-r/"
+    ],
+    "url": "https://yuva-sri-ramesh-portfolio.vercel.app/",
+    "title": "Yuva Sri Ramesh | AI Developer",
+    "description": null,
+    "scraped_at": "2025-06-11T19:39:45.285194"
+  },
+  "github_data": {
+    "name": "Nitish Kumar",
+    "bio": "Passionate about coding and problem-solving.\r\nExploring new technologies and building cool projects.\r\nGamer & Anime enthusiast—always up for a good - discussion",
+    "location": null,
+    "public_repos": 2,
+    "followers": 0,
+    "following": 1,
+    "created_at": "2024-01-29T07:44:54Z",
+    "profile_url": "https://github.com/Nitish-kumar7",
+    "languages": {
+      "Python": 2
+    },
+    "total_stars": 0,
+    "activity_score": 14,
+    "last_updated": "2025-06-11T19:39:47.001791"
+  },
+  "instagram_data": {
+    "username": "yuvi_ramesh_",
+    "error": "Profile is private or requires login",
+    "timestamp": "2025-06-11T19:39:54.059365"
+  },
+  "job_requirements": {
+    "required_skills": [
+      "Python",
+      "JavaScript",
+      "HTML",
+      "CSS",
+      "React",
+      "Node.js",
+      "Git",
+      "SQL",
+      "REST",
+      "API"
+    ],
+    "preferred_skills": [
+      "TypeScript",
+      "AWS",
+      "Docker",
+      "MongoDB",
+      "Express.js",
+      "Redux",
+      "GraphQL",
+      "CI/CD",
+      "Agile",
+      "DevOps"
+    ],
+    "min_experience_years": 1,
+    "min_projects": 2,
+    "min_github_stars": 5,
+    "min_github_repos": 3,
+    "required_education": "bachelor"
+  },
+  "timestamp": "2025-06-11T19:40:00.885053"
+}

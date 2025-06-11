@@ -210,33 +210,47 @@ class InstagramScraper:
         try:
             # Ensure driver is initialized before use
             if not self.driver:
-                 self._setup_driver() # Re-initialize if it was closed
+                self._setup_driver()  # Re-initialize if it was closed
 
             self._respect_rate_limit()
             logger.info(f"Attempting to scrape: {profile_url}")
             
-            # Navigate to the profile page
-            self.driver.get(profile_url)
+            # Navigate to the profile page with retry logic
+            max_retries = 3
+            retry_count = 0
+            while retry_count < max_retries:
+                try:
+                    self.driver.get(profile_url)
+                    # Check if we got a login page
+                    if "Login" in self.driver.title or "login" in self.driver.page_source.lower():
+                        logger.warning(f"Got login page for @{username}, profile might be private")
+                        return {
+                            'username': username,
+                            'error': 'Profile is private or requires login',
+                            'timestamp': datetime.now().isoformat()
+                        }
+                    break
+                except Exception as e:
+                    retry_count += 1
+                    if retry_count == max_retries:
+                        logger.error(f"Failed to connect after {max_retries} attempts")
+                        return {
+                            'username': username,
+                            'error': 'Failed to connect to Instagram',
+                            'timestamp': datetime.now().isoformat()
+                        }
+                    logger.warning(f"Connection attempt {retry_count} failed, retrying...")
+                    time.sleep(2)  # Wait before retrying
             
             # Check if profile exists or is private
             if "Page Not Found" in self.driver.page_source or "Sorry, this page isn't available" in self.driver.page_source:
-                 # Attempt to extract meta data even if page not found to check for private profiles
-                 soup = BeautifulSoup(self.driver.page_source, 'html.parser')
-                 meta_data = self._extract_meta_data(soup) # Reuse meta data extraction logic
-                 if meta_data and 'description' in meta_data and ('Private' in meta_data['description'] or 'followers' not in meta_data['description'].lower()):
-                      logger.warning(f"Profile @{username} appears to be private or not found.")
-                      return {
-                          'username': username,
-                          'error': 'Profile not found or is private',
-                          'timestamp': datetime.now().isoformat()
-                      }
-                 else:
-                    logger.error(f"Profile @{username} not found or unavailable.")
-                    return {
-                        'username': username,
-                        'error': 'Profile not found or unavailable',
-                        'timestamp': datetime.now().isoformat()
-                    }
+                logger.error(f"Profile @{username} not found or unavailable.")
+                return {
+                    'username': username,
+                    'error': 'Profile not found or unavailable',
+                    'timestamp': datetime.now().isoformat()
+                }
+            
             # Extract profile data
             profile_data = self._extract_profile_data()
             
@@ -247,32 +261,28 @@ class InstagramScraper:
                 return profile_data
             
             # If all extraction methods fail
-            logger.error(f"Could not extract profile data for @{username} after loading.")
+            logger.error(f"Could not extract profile data for @{username}")
             return {
                 'username': username,
-                'error': 'Could not extract profile data after loading',
+                'error': 'Could not extract profile data',
                 'timestamp': datetime.now().isoformat()
             }
             
-        except TimeoutException:
-            logger.error(f"Timeout while loading page for @{username}")
-            return {
-                'username': username,
-                'error': 'Timeout while loading page',
-                'timestamp': datetime.now().isoformat()
-            }
         except Exception as e:
-            logger.error(f"Unexpected error while scraping @{username}: {e}")
+            logger.error(f"Error scraping profile @{username}: {str(e)}")
             return {
                 'username': username,
-                'error': f"Unexpected error: {str(e)}",
+                'error': f'Error during scraping: {str(e)}',
                 'timestamp': datetime.now().isoformat()
             }
         finally:
-            # Clean up only if an error occurred that prevents further use, otherwise keep the driver for the next request
-            # To clean up after each request regardless of error, move the quit() here
-            # For persistent use across requests in a server, manage driver lifecycle carefully
-            pass # Decide when to quit the driver based on application needs
+            # Clean up the driver
+            try:
+                if self.driver:
+                    self.driver.quit()
+                    self.driver = None
+            except Exception as e:
+                logger.error(f"Error closing driver: {str(e)}")
 
     def __del__(self):
         """Clean up the WebDriver when the object is destroyed."""
