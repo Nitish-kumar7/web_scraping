@@ -1,6 +1,6 @@
-# Candidate Verification System
+# Social Media Profile Scraping System
 
-A FastAPI-based backend system that integrates with various platforms to analyze candidate profiles and match them against job descriptions.
+A comprehensive system for scraping and analyzing social media profiles using FastAPI backend and React frontend.
 
 ## Features
 
@@ -16,29 +16,30 @@ A FastAPI-based backend system that integrates with various platforms to analyze
 ## Prerequisites
 
 - Python 3.8+
+- Node.js 16+
 - pip (Python package manager)
+- npm or yarn (Node package manager)
 - Virtual environment (recommended)
 
 ## Installation
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
-cd social_media_scraping
+git clone https://github.com/Nitish-kumar7/web_scraping.git
+cd web_scraping
 ```
 
-2. Create and activate a virtual environment:
+2. Backend Setup:
 ```bash
+# Create and activate virtual environment
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
 
-3. Install dependencies:
-```bash
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-4. Create a `.env` file in the project root with the following variables:
+3. Create a `.env` file in the project root with the following variables:
 ```env
 # API Configuration
 API_KEY=your_api_key_here
@@ -63,32 +64,20 @@ OPENAI_API_KEY=your_openai_api_key_here
 
 ## Usage
 
-1. Start the server:
+1. Start the backend server:
 ```bash
-python backend/main.py
+cd backend
+python main.py
 ```
 
 2. The API will be available at `http://localhost:8000`
 
 3. API Endpoints:
-
 - `GET /github/{username}` - Fetch GitHub profile data
 - `POST /resume/upload` - Upload and parse resume
 - `GET /instagram/{username}` - Fetch Instagram profile data
 - `GET /portfolio?url={url}` - Analyze portfolio website
 - `POST /analyze` - Analyze candidate data against job description
-
-4. Example API request:
-```bash
-curl -X POST "http://localhost:8000/analyze" \
-     -H "X-API-Key: your_api_key_here" \
-     -H "Content-Type: application/json" \
-     -d '{
-           "github_url": "https://github.com/username",
-           "portfolio_url": "https://portfolio.com",
-           "job_description": "Looking for a Python developer with React experience..."
-         }'
-```
 
 ## API Documentation
 
